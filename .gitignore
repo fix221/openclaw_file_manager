@@ -1,2 +1,6 @@
 uploads/
 downloads/
+AGENTS.md
+tests/
+docs/
+__pycache__/

@@ -72,6 +72,7 @@
             background: #16213e;
             border-radius: 5px;
             transition: background 0.2s;
+            gap: 10px;
         }
         .file-item:hover {
             background: #1f4068;
@@ -84,7 +85,17 @@
             min-width: 0;
         }
         .file-icon {
-            font-size: 1.2rem;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: #0f3460;
+            color: #fff;
+            flex-shrink: 0;
         }
         .file-name {
             overflow: hidden;
@@ -95,6 +106,7 @@
             color: #888;
             font-size: 0.85rem;
             margin-right: 10px;
+            flex-shrink: 0;
         }
         .btn {
             padding: 6px 12px;
@@ -128,6 +140,7 @@
         .file-actions {
             display: flex;
             gap: 5px;
+            flex-shrink: 0;
         }
         .upload-area {
             margin-top: 15px;
@@ -142,6 +155,7 @@
             cursor: pointer;
             transition: all 0.2s;
             text-align: center;
+            display: block;
         }
         .upload-btn:hover {
             background: #ff6b6b;
@@ -174,16 +188,28 @@
             opacity: 1;
             transform: translateY(0);
         }
+        @media (max-width: 960px) {
+            .container {
+                flex-direction: column;
+            }
+            .file-item {
+                flex-wrap: wrap;
+            }
+            .file-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>📁 文件管理器</h1>
+        <h1>文件管理器</h1>
     </header>
     <div class="container">
         <div class="panel">
             <div class="panel-header">
-                <h2>⬇️ 下载区</h2>
+                <h2>下载区</h2>
                 <button class="btn btn-download" onclick="loadFiles('downloads')">刷新</button>
             </div>
             <div class="file-list" id="downloadList">
@@ -192,7 +218,7 @@
         </div>
         <div class="panel">
             <div class="panel-header">
-                <h2>⬆️ 上传区</h2>
+                <h2>上传区</h2>
             </div>
             <div class="file-list" id="uploadList">
                 <div class="empty">暂无文件</div>
@@ -219,22 +245,22 @@
         function getFileIcon(filename) {
             const ext = filename.split('.').pop().toLowerCase();
             const icons = {
-                pdf: '📕',
-                doc: '📘', docx: '📘',
-                xls: '📗', xlsx: '📗',
-                ppt: '📙', pptx: '📙',
-                jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', svg: '🖼️', webp: '🖼️',
-                mp4: '🎬', avi: '🎬', mkv: '🎬', mov: '🎬', wmv: '🎬',
-                mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵',
-                zip: '📦', rar: '📦', '7z': '📦', tar: '📦', gz: '📦',
-                txt: '📄', md: '📄',
-                html: '🌐', css: '🎨', js: '⚡', json: '📋',
-                py: '🐍', java: '☕', cpp: '⚙️', c: '⚙️', go: '🔵', rs: '🦀',
-                exe: '⚡', msi: '⚡',
-                dll: '🔧',
-                iso: '💿', img: '💿',
+                pdf: 'PDF',
+                doc: 'DOC', docx: 'DOC',
+                xls: 'XLS', xlsx: 'XLS',
+                ppt: 'PPT', pptx: 'PPT',
+                jpg: 'IMG', jpeg: 'IMG', png: 'IMG', gif: 'IMG', bmp: 'IMG', svg: 'IMG', webp: 'IMG',
+                mp4: 'VID', avi: 'VID', mkv: 'VID', mov: 'VID', wmv: 'VID',
+                mp3: 'AUD', wav: 'AUD', flac: 'AUD', aac: 'AUD',
+                zip: 'ZIP', rar: 'ZIP', '7z': 'ZIP', tar: 'ZIP', gz: 'ZIP',
+                txt: 'TXT', md: 'TXT',
+                html: 'WEB', css: 'CSS', js: 'JS', json: 'JSON',
+                py: 'PY', java: 'JAVA', cpp: 'CPP', c: 'C', go: 'GO', rs: 'RS',
+                exe: 'EXE', msi: 'EXE',
+                dll: 'DLL',
+                iso: 'ISO', img: 'ISO',
             };
-            return icons[ext] || '📄';
+            return icons[ext] || 'FILE';
         }
 
         function showToast(message) {
@@ -244,35 +270,82 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+        function createEmptyState(message) {
+            const empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = message;
+            return empty;
+        }
+
+        function createActionButton(className, label, handler) {
+            const button = document.createElement('button');
+            button.className = `btn ${className}`;
+            button.textContent = label;
+            button.addEventListener('click', handler);
+            return button;
+        }
+
+        function createFileItem(file, folder) {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+
+            const info = document.createElement('div');
+            info.className = 'file-info';
+
+            const icon = document.createElement('span');
+            icon.className = 'file-icon';
+            icon.textContent = getFileIcon(file.name);
+
+            const name = document.createElement('span');
+            name.className = 'file-name';
+            name.title = file.name;
+            name.textContent = file.name;
+
+            info.appendChild(icon);
+            info.appendChild(name);
+            item.appendChild(info);
+
+            const size = document.createElement('span');
+            size.className = 'file-size';
+            size.textContent = formatSize(file.size);
+            item.appendChild(size);
+
+            if (folder === 'downloads') {
+                const actions = document.createElement('div');
+                actions.className = 'file-actions';
+                actions.appendChild(createActionButton('btn-copy', '复制链接', () => copyLink(file.name)));
+                actions.appendChild(createActionButton('btn-download', '下载', () => downloadFile(file.name)));
+                actions.appendChild(createActionButton('btn-delete', '删除', () => deleteFile(file.name, folder)));
+                item.appendChild(actions);
+            }
+
+            return item;
+        }
+
+        function renderFiles(list, files, folder) {
+            list.innerHTML = '';
+            if (!Array.isArray(files) || files.length === 0) {
+                list.appendChild(createEmptyState('暂无文件'));
+                return;
+            }
+
+            files.forEach(file => {
+                list.appendChild(createFileItem(file, folder));
+            });
+        }
+
         function loadFiles(folder) {
             const listId = folder === 'downloads' ? 'downloadList' : 'uploadList';
             const list = document.getElementById(listId);
-            
+
             fetch(`/api/files/${folder}`)
                 .then(res => res.json())
                 .then(files => {
-                    if (files.length === 0) {
-                        list.innerHTML = '<div class="empty">暂无文件</div>';
-                    } else {
-                        list.innerHTML = files.map(f => `
-                            <div class="file-item">
-                                <div class="file-info">
-                                    <span class="file-icon">${getFileIcon(f.name)}</span>
-                                    <span class="file-name" title="${f.name}">${f.name}</span>
-                                </div>
-                                <span class="file-size">${formatSize(f.size)}</span>
-                                ${folder === 'downloads' ? `
-                                <div class="file-actions">
-                                    <button class="btn btn-copy" onclick="copyLink('${f.name}')">复制链接</button>
-                                    <button class="btn btn-download" onclick="downloadFile('${f.name}')">下载</button>
-                                    <button class="btn btn-delete" onclick="deleteFile('${f.name}', 'downloads')">删除</button>
-                                </div>` : ''}
-                            </div>
-                        `).join('');
-                    }
+                    renderFiles(list, files, folder);
                 })
-                .catch(err => {
-                    list.innerHTML = '<div class="empty">加载失败</div>';
+                .catch(() => {
+                    list.innerHTML = '';
+                    list.appendChild(createEmptyState('加载失败'));
                 });
         }
 
@@ -291,41 +364,45 @@
 
         function deleteFile(filename, folder) {
             if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
-            
+
             fetch('/api/delete', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({filename, folder})
+                body: JSON.stringify({ filename, folder })
             })
             .then(res => res.json())
-            .then(data => {
+            .then(() => {
                 showToast('删除成功');
                 loadFiles(folder);
             })
-            .catch(err => {
+            .catch(() => {
                 showToast('删除失败');
             });
         }
 
         function uploadFile(file) {
             if (!file) return;
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             })
             .then(res => res.json())
             .then(data => {
+                if (data.error) {
+                    showToast(data.error);
+                    return;
+                }
                 showToast('上传成功');
                 loadFiles('uploads');
             })
-            .catch(err => {
+            .catch(() => {
                 showToast('上传失败');
             });
-            
+
             document.getElementById('fileInput').value = '';
         }
 
