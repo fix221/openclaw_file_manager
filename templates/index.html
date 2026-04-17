@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理器</title>
+    <link rel="icon" href="/static/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #16213e;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #0f3460;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            color: #e94560;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .panel h2 {
+            font-size: 1.3rem;
+            color: #e94560;
+        }
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            background: #0f0f23;
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 300px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #16213e;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+        .file-item:hover {
+            background: #1f4068;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .file-icon {
+            font-size: 1.2rem;
+        }
+        .file-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-size {
+            color: #888;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-download {
+            background: #e94560;
+            color: white;
+        }
+        .btn-download:hover {
+            background: #ff6b6b;
+        }
+        .btn-copy {
+            background: #0f3460;
+            color: white;
+        }
+        .btn-copy:hover {
+            background: #1a4a7a;
+        }
+        .btn-delete {
+            background: #c0392b;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #e74c3c;
+        }
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .upload-area {
+            margin-top: 15px;
+        }
+        .upload-btn {
+            width: 100%;
+            padding: 15px;
+            background: #e94560;
+            color: white;
+            border: 2px dashed #e94560;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .upload-btn:hover {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+        #fileInput {
+            display: none;
+        }
+        .empty {
+            text-align: center;
+            color: #666;
+            padding: 50px;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(233, 69, 96, 0.85);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📁 文件管理器</h1>
+    </header>
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">
+                <h2>⬇️ 下载区</h2>
+                <button class="btn btn-download" onclick="loadFiles('downloads')">刷新</button>
+            </div>
+            <div class="file-list" id="downloadList">
+                <div class="empty">暂无文件</div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <h2>⬆️ 上传区</h2>
+            </div>
+            <div class="file-list" id="uploadList">
+                <div class="empty">暂无文件</div>
+            </div>
+            <div class="upload-area">
+                <label class="upload-btn">
+                    点击选择文件上传到上传区
+                    <input type="file" id="fileInput" onchange="uploadFile(this.files[0])">
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                pdf: '📕',
+                doc: '📘', docx: '📘',
+                xls: '📗', xlsx: '📗',
+                ppt: '📙', pptx: '📙',
+                jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', svg: '🖼️', webp: '🖼️',
+                mp4: '🎬', avi: '🎬', mkv: '🎬', mov: '🎬', wmv: '🎬',
+                mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵',
+                zip: '📦', rar: '📦', '7z': '📦', tar: '📦', gz: '📦',
+                txt: '📄', md: '📄',
+                html: '🌐', css: '🎨', js: '⚡', json: '📋',
+                py: '🐍', java: '☕', cpp: '⚙️', c: '⚙️', go: '🔵', rs: '🦀',
+                exe: '⚡', msi: '⚡',
+                dll: '🔧',
+                iso: '💿', img: '💿',
+            };
+            return icons[ext] || '📄';
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function loadFiles(folder) {
+            const listId = folder === 'downloads' ? 'downloadList' : 'uploadList';
+            const list = document.getElementById(listId);
+            
+            fetch(`/api/files/${folder}`)
+                .then(res => res.json())
+                .then(files => {
+                    if (files.length === 0) {
+                        list.innerHTML = '<div class="empty">暂无文件</div>';
+                    } else {
+                        list.innerHTML = files.map(f => `
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">${getFileIcon(f.name)}</span>
+                                    <span class="file-name" title="${f.name}">${f.name}</span>
+                                </div>
+                                <span class="file-size">${formatSize(f.size)}</span>
+                                ${folder === 'downloads' ? `
+                                <div class="file-actions">
+                                    <button class="btn btn-copy" onclick="copyLink('${f.name}')">复制链接</button>
+                                    <button class="btn btn-download" onclick="downloadFile('${f.name}')">下载</button>
+                                    <button class="btn btn-delete" onclick="deleteFile('${f.name}', 'downloads')">删除</button>
+                                </div>` : ''}
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(err => {
+                    list.innerHTML = '<div class="empty">加载失败</div>';
+                });
+        }
+
+        function downloadFile(filename) {
+            window.location.href = `/api/download/${encodeURIComponent(filename)}`;
+        }
+
+        function copyLink(filename) {
+            const link = `${window.location.origin}/api/download/${encodeURIComponent(filename)}`;
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('链接已复制');
+            }).catch(() => {
+                showToast('复制失败');
+            });
+        }
+
+        function deleteFile(filename, folder) {
+            if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
+            
+            fetch('/api/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({filename, folder})
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast('删除成功');
+                loadFiles(folder);
+            })
+            .catch(err => {
+                showToast('删除失败');
+            });
+        }
+
+        function uploadFile(file) {
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast('上传成功');
+                loadFiles('uploads');
+            })
+            .catch(err => {
+                showToast('上传失败');
+            });
+            
+            document.getElementById('fileInput').value = '';
+        }
+
+        loadFiles('downloads');
+        loadFiles('uploads');
+        setInterval(() => {
+            loadFiles('downloads');
+            loadFiles('uploads');
+        }, 5000);
+    </script>
+</body>
+</html>
